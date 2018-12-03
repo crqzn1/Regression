@@ -6,21 +6,22 @@ Created on Sat Dec  1 22:34:16 2018
 @author: vash
 """
 
-import math
 import numpy as np
 import pandas as pd
+import math
 import matplotlib.pyplot as plt
 
-x=np.linspace(0,20,50)
-y=x*2+1+1*np.sin(4*x)+0.1*np.random.random(50)
-u=np.ones(50)
+n=200
+x=np.linspace(0,20,n)
+y=x*2+1+1*np.sin(4*x)+0.2*np.random.random(n)
+u=np.ones(n)
 df=pd.DataFrame({'x':x,'y':y})
 
 # curve fit from scipy
 from scipy import optimize
 def lin_func(x,a,b):
     return a*x+b
-linfit_coefs,linfit_covar=optimize.curve_fit(approx_func,x,y,[1,1])
+linfit_coefs,linfit_covar=optimize.curve_fit(lin_func,x,y,[1,1])
 print(linfit_coefs)
 def lin_sin_func(x,a,b,c):
     return a*x+b+c*np.sin(4*x)
@@ -39,4 +40,24 @@ my=np.mat(y).T
 linmat_coef=std_linreg(mx,my)
 print(linmat_coef)
 
-
+# locally weighted linear regression
+# local linear regression on x0 with lambda=k
+def loc_linreg(X,Y,x0,k):
+    def gaussian_kernel(v,k):
+        return np.exp(-np.linalg.norm(v,2)/(2*k))/k
+    N=len(Y)
+    W=np.mat(np.zeros((N,N)))
+    for i in range(N):
+        W[i,i]=gaussian_kernel(X[i]-x0,k)
+    return (X.T*W*X).I*X.T*W*Y
+pred_y=[]
+for xi in mx:
+    w=loc_linreg(mx,my,xi,0.1)
+    #w=loc_linreg(mx,my,xi,0.5)
+    #w=loc_linreg(mx,my,xi,0.05)
+    pred_y.append(xi*w)
+py=[float(t) for t in pred_y]
+plt.figure(figsize=(16,12))
+plt.scatter(x,y,c='r',s=4)
+plt.plot(x,py,c='b')
+plt.show()
